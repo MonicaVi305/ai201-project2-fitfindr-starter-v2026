@@ -20,9 +20,29 @@ That last line is what your loop branches on. "Returns a list" earns nothing —
 the description has to say what is *in* the list.
 """
 
-import config  # noqa: F401 — you'll use this in search_listings
+import re
+
+import config
 from generate import generate
 from utils.data_loader import load_listings
+
+
+def _tokenize(text: str) -> set[str]:
+    """Lowercase word/number tokens, stripped of punctuation."""
+    return set(re.findall(r"[a-z0-9']+", text.lower()))
+
+
+def _size_tokens(size: str) -> set[str]:
+    """
+    Break a size string into exact tokens instead of leaving it as one blob.
+
+    Splitting on non-alphanumeric characters means "S/M" becomes {"s", "m"}
+    and "XL (oversized)" becomes {"xl", "oversized"} — so a query for "L"
+    matches the first (an exact "s"/"m" token) but not the second (there is
+    no bare "l" token, only "xl"). A plain substring test would get both
+    wrong in different directions.
+    """
+    return {t for t in re.split(r"[^a-z0-9.]+", size.lower()) if t}
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
@@ -78,8 +98,35 @@ def search_listings(
     Test it from a terminal before you move on:
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
-    # TODO: replace this with your implementation
-    return []
+    listings = load_listings() 
+
+    if max_price is not None:
+        listings = [item for item in listings if item["price"] <= max_price]
+
+    if size is not None:
+        query_size_tokens = _size_tokens(size)
+        listings = [
+            item for item in listings
+            if query_size_tokens & _size_tokens(item["size"])
+        ]
+
+    query_tokens = _tokenize(description)
+
+    scored = []
+    for item in listings:
+        haystack = " ".join([
+            item["title"],
+            item["description"],
+            item["category"],
+            " ".join(item["style_tags"]),
+            item["brand"] or "",
+        ])
+        score = len(query_tokens & _tokenize(haystack))
+        if score > 0:
+            scored.append((score, item))
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [item for _score, item in scored[:config.SEARCH_RESULT_LIMIT]]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
@@ -112,8 +159,38 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    item_desc = (
+        f"{new_item.get('title')} — {new_item.get('category')}, "
+        f"colors: {', '.join(new_item.get('colors', []))}, "
+        f"style: {', '.join(new_item.get('style_tags', []))}"
+    )
+
+    system = (
+        "You are a thrift-shopping stylist for FitFindr. You give short, "
+        "concrete outfit ideas — name real pieces, not vague vibes."
+    )
+
+    items = wardrobe.get("items", [])
+    if not items:
+        prompt = (
+            f"A shopper is considering this thrifted item:\n{item_desc}\n\n"
+            "They haven't told us what else is in their closet. Suggest one "
+            "or two general outfit directions for this piece — what kind of "
+            "pieces would pair well with it and why."
+        )
+    else:
+        wardrobe_lines = "\n".join(
+            f"- {w['name']} ({w['category']}, {', '.join(w.get('colors', []))})"
+            for w in items
+        )
+        prompt = (
+            f"A shopper is considering this thrifted item:\n{item_desc}\n\n"
+            f"Here is what's already in their closet:\n{wardrobe_lines}\n\n"
+            "Suggest one or two outfits that pair the new item with pieces "
+            "they already own. Name the specific pieces from their closet."
+        )
+
+    return generate(prompt, system=system)
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -152,5 +229,28 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if not outfit or not outfit.strip():
+        return (
+            f"No outfit suggestion yet for {new_item.get('title')} "
+            f"(${new_item.get('price')} on {new_item.get('platform')}) — "
+            "run suggest_outfit first."
+        )
+
+    system = (
+        "You write short social captions for a thrifting app. Write like a "
+        "real person posting a find, not a product listing. Two to four "
+        "sentences. Mention the item, the price, and the platform exactly "
+        "once each, and be specific about the vibe rather than generic."
+    )
+
+    prompt = (
+        f"Item: {new_item.get('title')}\n"
+        f"Price: ${new_item.get('price')}\n"
+        f"Platform: {new_item.get('platform')}\n"
+        f"Colors: {', '.join(new_item.get('colors', []))}\n"
+        f"Style: {', '.join(new_item.get('style_tags', []))}\n"
+        f"Outfit idea: {outfit}\n\n"
+        "Write the caption now."
+    )
+
+    return generate(prompt, system=system)
