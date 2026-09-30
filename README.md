@@ -59,24 +59,24 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Searches the mock listings dataset for items matching a text description, optionally filtered by size and a maximum price.
+- **Inputs:** `description` (str) — free-text keywords matched against each listing's title, description, category, style tags, and brand. `size` (str | None) — a size string filtered by exact token match (not substring), or `None` to skip size filtering. `max_price` (float | None) — the highest acceptable price, inclusive, or `None` to skip price filtering.
+- **Returns:** A list of listing dicts, best match first — each with `id`, `title`, `description`, `category`, `style_tags`, `size`, `condition`, `price`, `colors`, `brand`, `platform`. Sorted by keyword-overlap score with `description`, capped at `config.SEARCH_RESULT_LIMIT`.
+- **When it has nothing:** Returns an empty list — never `None`, never an exception.
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Calls the model to suggest one or two outfits pairing a candidate thrifted item with the user's existing wardrobe.
+- **Inputs:** `new_item` (dict) — a listing dict for the item being considered. `wardrobe` (dict) — a wardrobe dict with an `items` key holding a list of wardrobe item dicts (`name`, `category`, `colors`, `style_tags`).
+- **Returns:** A non-empty string of outfit suggestions, naming specific wardrobe pieces by name when the wardrobe isn't empty.
+- **When it has nothing:** If `wardrobe['items']` is empty, it still returns a non-empty string — general styling advice for the item instead of wardrobe-specific pairings. It never returns `""`.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Calls the model to write a short caption for a thrifted find, based on an outfit suggestion and the item's details.
+- **Inputs:** `outfit` (str) — the outfit suggestion string returned by `suggest_outfit()`. `new_item` (dict) — the listing dict for the item.
+- **Returns:** A two-to-four sentence caption string that mentions the item, price, and platform exactly once each.
+- **When it has nothing:** If `outfit` is empty or whitespace-only, returns a descriptive placeholder string naming the item and price and saying no outfit suggestion exists yet — it never raises.
 
 ---
 
@@ -93,13 +93,13 @@
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If `search_listings` returns an empty list, put a message in `session["error"]` naming what to change (broader description, higher price ceiling, different size) and stop — `suggest_outfit` and `create_fit_card` are never called. Otherwise, take the first result as `session["selected_item"]` and continue to `suggest_outfit`, then `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regex. `_parse_query()` in `agent.py` pulls a price ceiling from an `"under $X"` pattern and a size from a `"size X"` pattern, removes both from the string, and treats what's left as the description.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** `query` → `parsed` (`description`, `size`, `max_price`) → `search_results` → `selected_item` (first result) → `outfit_suggestion` → `fit_card`. `error` is set only on the empty-search branch, and when it is, everything after `search_results` stays `None`.
 
 ---
 
