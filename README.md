@@ -113,26 +113,65 @@
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
 
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   **Outfit 1: Y2K Streetwear**
+*   **New:** Y2K Butterfly Baby Tee
+*   **Bottoms:** Baggy straight-leg dark wash jeans
+*   **Outerwear:** Black cropped zip hoodie (worn unzipped)
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+
+**Outfit 2: Soft Contrast**
+*   **New:** Y2K Butterfly Baby Tee
+*   **Bottoms:** Wide-leg khaki trousers
+*   **Belt:** Brown leather belt (threaded through the trousers)
+*   **Shoes:** Chunky white sneakers
+*   **Outerwear:** Vintage black denim jacket
+
+  Fit card: Found this exact pink and purple butterfly baby tee scrolling through depop last week and I'm obsessed with the early 2000s mall-goth energy. It was only $18.0 and looks so good styled with baggy dark wash denim and chunky sneakers. Total nostalgic score for your summer rotation.
 ```
 
 **The three tools, tested one at a time**
 
 ```
 $ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
-
+[{'id': 'lst_002', 'title': 'Y2K Baby Tee — Butterfly Print', 'price': 18.0, 'platform': 'depop', ...}, {'id': 'lst_006', 'title': 'Graphic Tee — 2003 Tour Bootleg Style', 'price': 24.0, 'platform': 'depop', ...}, {'id': 'lst_017', 'title': 'Mesh Long-Sleeve Top — Black', 'price': 15.0, 'platform': 'depop', ...}, {'id': 'lst_033', 'title': 'Vintage Band Tee — Faded Grey', 'price': 19.0, 'platform': 'depop', ...}, {'id': 'lst_011', 'title': 'Low-Rise Cargo Pants — Khaki', 'price': 27.0, 'platform': 'poshmark', ...}, {'id': 'lst_015', 'title': 'Vintage Graphic Hoodie — Faded Black', 'price': 26.0, 'platform': 'depop', ...}]
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
+**Fit 1: Off-Duty Streetwear**
+*   **Top:** White ribbed tank top
+*   **Outerwear:** Vintage black denim jacket
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag + Brown leather belt
 
+**Fit 2: Cozy Casual**
+*   **Top:** Oversized grey crewneck sweatshirt
+*   **Shoes:** Black combat boots
+*   **Accessories:** Brown leather belt
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
+Found these vintage Levi's 501 jeans and they have that perfectly broken-in indigo wash you can never actually replicate. They just hit Depop for $38 and are begging to be worn with crisp white sneakers and an oversized tee. Truly the ultimate lazy-day streetwear uniform.
+```
+
+**Checking the fit card actually varies** — ran `create_fit_card` three times on the same item with `AI201_CACHE=0` (caching off, so three real calls):
 
 ```
+--- run 1 ---
+Finally found the holy grail of vintage Levi's 501 jeans with that perfectly broken-in indigo wash. Threw them up on depop for just $38.0 so someone else can rock the ultimate streetwear staple with fresh white sneakers. The slouchy fit on these is an absolute dream and they've got so much life left.
+--- run 2 ---
+Still recovering from finding these vintage Levi's 501 jeans in the absolute best medium wash. They give off major off-duty model energy when you pair them with beat-up white sneakers and an oversized tee. Snagged them on depop for just $38.0 and I honestly might never wear another pair of pants again.
+--- run 3 ---
+Found these broken-in vintage Levi's 501s and they literally fit like a glove. Throwing them on with crisp white sneakers for that effortless 90s streetwear look. Just posted these indigo beauties to my depop for $38 before I change my mind.
+```
+
+Three different captions — `TEMPERATURE = 0.9` in `config.py` is doing its job, not returning a cached answer.
 
 ---
 
@@ -177,17 +216,38 @@ $ python -c "from tools import create_fit_card; ..."
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops early | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. State: selected item matches what reaches `suggest_outfit` | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card: 2-4 sentences, price once, no duplicates | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Price ceiling respected | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| _diagnostic — empty wardrobe (not one of the five)_ |  | PASS | PASS | PASS | PASS | PASS |  |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+Full output for every try is in `results/run_2026-10-04_1632.md` (produced by
+`python run_eval.py --label before`, caching off, temperature 0.9).
+
+**Real output from one try**, pasted as text, from `agent.py::run_agent`
+(criterion 1, "matching query completes", try 1):
 
 ```
+$ python app.py ask 'vintage graphic tee under $30' --trace
 
+[1] parse_query
+      in:  vintage graphic tee under $30
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] suggest_outfit
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      out: **Outfit 1: Y2K Off-Duty** *   **Top:** Y2K Butterfly Baby Tee *   **Bottoms:** Baggy straight-leg dark wash j…
+[4] create_fit_card
+      in:  **Outfit 1: Y2K Off-Duty** *   **Top:** Y2K Butterfly Baby Tee *   **Bottoms:** Baggy straight-leg dark wash j…
+      out: Just scored this dreamy white, pink, and purple butterfly tee and I'm obsessed with the early 2000s energy. I’…
+
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+  Outfit:   **Outfit 1: Y2K Off-Duty** ... (full text in results/run_2026-10-04_1632.md)
+  Fit card: Just scored this dreamy white, pink, and purple butterfly tee and I'm obsessed with the early 2000s energy. I’m styling it with baggy dark wash denim and chunky sneakers for an effortless off-duty look. Snagged it on depop for just $18.0 and honestly, it’s my new favorite piece for spring.
 ```
 
 ---
@@ -212,15 +272,18 @@ that produced it:
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Matching query completes all three tools | 4 of 5 | MET (5/5) | All 5 tries had `stopped early: no`, a non-empty `outfit_suggestion`, and a non-empty `fit_card` — read straight off `results/run_2026-10-04_1632.md`. |
+| 2 | Impossible query stops before `suggest_outfit` | 5 of 5 | MET (5/5) | All 5 traces end at `[3] branch` with "no results, stopping before suggest_outfit"; no `suggest_outfit`/`create_fit_card` step ever appears. |
+| 3 | State: selected item matches what reaches `suggest_outfit` | 5 of 5 | MET (5/5) | In every try, `search_listings`'s top result and `suggest_outfit`'s `in:` line both name "Corduroy Wide-Leg Pants — Rust ($32.0, depop)" — same title/price/platform every time. |
+| 4 | Fit card: 2-4 sentences, price mentioned once, no duplicates | 4 of 5 | MET (5/5) | All 5 cards are 2-3 sentences, each mentions the price exactly once (`$45`/`$45.0`), and none of the 5 are word-for-word identical. |
+| 5 | Price ceiling respected | 5 of 5 | MET (5/5) | All 8 results returned for "under $25" are ≤ $25 in every one of the 5 tries (cheapest $14, priciest $22). `search_listings` has no randomness, so this held identically every try. |
 
 **Diagnoses**
 
+No misses this round — all five criteria cleared their targets on the first real run. Two things worth flagging that aren't misses but are worth tracking:
 
+- **Price formatting is inconsistent.** Some fit cards say `$45` and others say `$45.0` or `$18.0` — that's `str(float)` leaking through from `new_item['price']` into the prompt in `tools.py`'s `create_fit_card()`, not the model's choice. Criterion 4 only asked for "a dollar figure," which this still satisfies, but it reads oddly in a caption meant to sound like a real post.
+- **Criterion 1's target (4/5) never got exercised.** Because `search_listings` has no randomness and the eval reruns the same query 5 times, the only way this run could have come in under 5/5 is a model-side hiccup in `suggest_outfit`/`create_fit_card` (now caught by the `ModelUnavailable` handling in `agent.py`). The 4/5 target was really written for phrasing variance across *different* queries, which this scenario design doesn't test. Worth a second scenario with a weaker-match query if I want to actually probe that target.
 
 ---
 
