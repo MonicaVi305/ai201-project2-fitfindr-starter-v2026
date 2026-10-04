@@ -29,24 +29,40 @@ SCENARIOS = [
         "criterion": 2,
     },
     {
+        # Any normal matching query — criterion 3 checks what ends up in the
+        # session (selected_item's id vs. what suggest_outfit's trace shows),
+        # not anything about this query in particular. Matches lst_005 and
+        # lst_025, both under $40.
+        "name": "state: selected item matches what reaches suggest_outfit",
+        "query": "wide-leg pants under $40",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Same query every try. run_eval.py already runs each scenario 5
+        # times, so one entry here gives 5 fit cards for the same item —
+        # exactly what criterion 4 needs to check for shape (2-4 sentences,
+        # price mentioned once) and variation (no two identical).
+        "name": "fit card: same query, five tries",
+        "query": "90s track jacket with navy and white stripes",
+        "wardrobe": "example",
+        "criterion": 4,
+    }, 
+    {
+        # "under $25" should hold as a hard ceiling. Matches 8 listings,
+        # topped by lst_003 ($22) — plenty to check, not just one.
+        "name": "price ceiling respected",
+        "query": "Oversized Flannel Shirt Plaid Red/Black under $25",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    {
         # A user with nothing saved. One of unit 4's three failure modes.
         "name": "empty wardrobe",
         "query": "denim jacket under $50",
         "wardrobe": "empty",
         "criterion": None,
     },
-    # TODO: add what your criteria 3, 4 and 5 need.
-    #
-    # Set "criterion" to the number in criteria.md that the scenario tests.
-    # "criterion": None means a diagnostic run — useful to have, but it isn't
-    # one of your five, and run_eval.py marks it as such in the table.
-    #
-    # For a state criterion, any normal query works — what you're checking is
-    # what ends up in the session, not what the user typed.
-    #
-    # For a fit-card criterion, you probably want the SAME query listed more
-    # than once, or several different items, depending on what your criterion
-    # actually says.
 ]
 
 WARDROBES = ("example", "empty")
