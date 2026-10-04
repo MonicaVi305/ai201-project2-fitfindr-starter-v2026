@@ -32,6 +32,16 @@ def _tokenize(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9']+", text.lower()))
 
 
+def _format_price(price: float) -> str:
+    """
+    "$45" for whole dollars, "$45.50" otherwise — avoids the "$45.0" that
+    str(float) produces, which read like a product listing, not a caption.
+    """
+    if price == int(price):
+        return f"${int(price)}"
+    return f"${price:.2f}"
+
+
 def _size_tokens(size: str) -> set[str]:
     """
     Break a size string into exact tokens instead of leaving it as one blob.
@@ -232,7 +242,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     if not outfit or not outfit.strip():
         return (
             f"No outfit suggestion yet for {new_item.get('title')} "
-            f"(${new_item.get('price')} on {new_item.get('platform')}) — "
+            f"({_format_price(new_item.get('price'))} on {new_item.get('platform')}) — "
             "run suggest_outfit first."
         )
 
@@ -245,7 +255,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
 
     prompt = (
         f"Item: {new_item.get('title')}\n"
-        f"Price: ${new_item.get('price')}\n"
+        f"Price: {_format_price(new_item.get('price'))}\n"
         f"Platform: {new_item.get('platform')}\n"
         f"Colors: {', '.join(new_item.get('colors', []))}\n"
         f"Style: {', '.join(new_item.get('style_tags', []))}\n"
