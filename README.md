@@ -39,9 +39,7 @@
 
 ## What This Does
 
-<!-- Three or four sentences: what a user asks for, and what they get back. -->
-
-
+FitFindr takes a plain-language shopping query — e.g. "vintage graphic tee under $30" — and searches a fixed catalog of secondhand listings for the best keyword match within an optional size and price ceiling. For the top match, it asks a model to suggest one or two outfits pairing the new item with pieces already in the user's wardrobe (or general styling advice if the wardrobe is empty), then writes a short social-style caption — a "fit card" — naming the item, its price, and the platform it's on. If nothing matches the search, it stops immediately and tells the user what to change (a broader description, a higher price ceiling, a different size) instead of inventing an outfit for an item that doesn't exist.
 
 ---
 
@@ -186,15 +184,15 @@ Three different captions — `TEMPERATURE = 0.9` in `config.py` is doing its job
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* Write the three remaining acceptance criteria in `criteria.md` — one about state, one about the fit card, one of my choice.
+- *What came back:* Claude noticed my own draft of criterion 3 didn't actually test state at all — it was a duplicate of criterion 1 ("matches two or more listings... returns a fit card") mislabeled "3", and there was a second, stray "## 4" header left over from an earlier edit.
+- *What I changed:* Replaced criterion 3 with an actual state check — the `id` in `session["selected_item"]` has to match the `id` that shows up in the trace's `suggest_outfit` input — and deleted the stray duplicate section.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* Implement the Milestone 5 instructions in `agent.py`: route tool results through the session, then verify the happy path and the empty-match path from the terminal.
+- *What came back:* Claude pointed out that `run_agent()` already matched the branch rule, but it was passing local variables (`selected_item`, `outfit`) straight from one tool call into the next rather than reading them back out of `session` — which works today because it's the same object, but doesn't satisfy "going through the session is what makes the state visible and testable." It then verified the fix with a real identity check (`session["selected_item"] is received_item`, via a spy wrapped around `suggest_outfit`) instead of just comparing by value.
+- *What I changed:* Every call in `run_agent()` now reads its input from `session[...]` explicitly instead of the local variable left over from the previous step.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
@@ -270,7 +268,7 @@ $ python app.py ask 'vintage graphic tee under $30' --trace
      Look for a pattern. Three misses on the same tool is one problem, not
      three. -->
 
-| # | Criterion | Target | Verdict | How I decided |
+| # | Criterion | Target | Verdict | How I decided | 
 |---|---|---|---|---|
 | 1 | Matching query completes all three tools | 4 of 5 | MET (5/5) | All 5 tries had `stopped early: no`, a non-empty `outfit_suggestion`, and a non-empty `fit_card` — read straight off `results/run_2026-10-04_1632.md`. |
 | 2 | Impossible query stops before `suggest_outfit` | 5 of 5 | MET (5/5) | All 5 traces end at `[3] branch` with "no results, stopping before suggest_outfit"; no `suggest_outfit`/`create_fit_card` step ever appears. |
@@ -302,21 +300,59 @@ No misses this round — all five criteria cleared their targets on the first re
 **Happy path**
 
 ```
+$ python app.py ask 'vintage graphic tee under $30' --trace
 
+[1] parse_query
+      in:  vintage graphic tee under $30
+      out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] suggest_outfit
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      out: **Outfit 1: Y2K Streetwear** *   **New:** Y2K Butterfly Baby Tee *   **Bottoms:** Baggy straight-leg dark wash…
+[4] create_fit_card
+      in:  **Outfit 1: Y2K Streetwear** *   **New:** Y2K Butterfly Baby Tee *   **Bottoms:** Baggy straight-leg dark wash…
+      out: Found this exact pink and purple butterfly baby tee scrolling through depop last week and I'm obsessed with th…
+
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+  Fit card: Found this exact pink and purple butterfly baby tee scrolling through depop last week and I'm obsessed with the early 2000s mall-goth energy. It was only $18.0 and looks so good styled with baggy dark wash denim and chunky sneakers. Total nostalgic score for your summer rotation.
 ```
 
 **Empty search**
 
 ```
+$ python app.py ask 'designer ballgown size XXS under $5' --trace
 
+[1] parse_query
+      in:  designer ballgown size XXS under $5
+      out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+[3] branch
+      →    no results, stopping before suggest_outfit
+
+  No listings matched that search. Try a broader description, a higher price ceiling, or a different size.
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+Four steps in the happy path, three in the empty search — it stops before `suggest_outfit` ever runs, exactly as the branch rule says.
 
+**Third failure mode — a bad API key, triggered on purpose:**
 
+```
+$ GEMINI_API_KEY=invalid_broken_key_12345 AI201_CACHE=0 python app.py ask 'vintage graphic tee under $30' --trace
+
+[3] suggest_outfit
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      →    model unavailable, stopping
+
+  Outfit suggestions are unavailable right now: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+```
+
+`session["error"]` is set, `session["fit_card"]` stays `None`, and the message is readable instead of a stack trace — the `ModelUnavailable` handling in `agent.py` catches it at the `suggest_outfit` step and stops there. Between this, the empty-search branch above, and the empty-wardrobe scenario in the Run Log, all three of unit 4's failure modes have actually been triggered, not just coded for.
+
+**On the MCP move:** `search_listings` is now registered as an MCP tool in `mcp_server.py` (`@mcp.tool()`, with a description covering what it needs and what it returns when nothing matches) and `agent.py` calls it through `mcp_client.call_tool("search_listings", {...})` instead of importing the function directly. The promise held — the happy-path output above is byte-identical to the pre-MCP run (same cached fit card, same outfit), so the rewire changed nothing except where the call crosses a process boundary. The one snag: my global `python` doesn't have the `mcp` package installed, only the project's `.venv` does, so every MCP-related command in this README was run with `.venv/Scripts/python.exe` explicitly rather than bare `python`.
 
 ---
 
@@ -327,36 +363,42 @@ full. -->
 
      `python run_eval.py --label after` -->
 
-**What I changed:**
+**What I changed:** Added a `_format_price()` helper in `tools.py` that renders a whole-dollar price as `$45` instead of Python's `str(float)` giving `$45.0`, and used it everywhere `create_fit_card()` puts a price into a prompt (both the main prompt and the empty-outfit placeholder message).
 
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** Not a criterion miss — all five were already MET. It targets the first observation flagged in **Verdicts and Diagnoses**: `str(float)` leaking into the fit-card prompt as `$45.0`/`$18.0`, which read like a product listing instead of a real post.
 
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops early | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. State: selected item matches what reaches `suggest_outfit` | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card: 2-4 sentences, price once, no duplicates | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Price ceiling respected | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
+Full output: `results/run_2026-10-04_1803_after.md` (`python run_eval.py --label after`, caching off, temperature 0.9, now calling `search_listings` over MCP).
 
-<!-- If it made things worse, say that. Honestly reported, that earns full
-     credit and is more interesting than one that worked. -->
+**Did it help, and how do I know:** Yes. I counted trailing-`.0` prices inside the actual `Fit card:` text (not the debug/trace lines, which still print the raw listing dict and aren't model output) across both run logs:
 
+```
+before (results/run_2026-10-04_1632.md): 25 fit cards, 10 with a trailing .0
+after  (results/run_2026-10-04_1803_after.md): 25 fit cards, 0 with a trailing .0
+```
+
+All five criteria verdicts are unchanged (still 5/5 MET) — this fix didn't move any PASS/FAIL cell, because no criterion actually checked price formatting. It's a real, measured improvement to output quality that the existing criteria were blind to, which is itself worth noting under "What's Still Broken" below.
 
 
 ---
 
 ## What's Still Broken
 
-<!-- For each criterion still missed: what you'd do, and why you stopped where
-     you did. "I ran out of time" is fine if it's true. Pretending nothing is
-     left is not. -->
+No criterion is currently missed, so nothing here is a failed target — these are gaps the five criteria don't cover, found while doing this unit's work:
 
-
+- **Criterion 1's 4-of-5 target has never actually been exercised.** `scenarios.py` reruns the same query 5 times, and `search_listings` has no randomness, so the only way this run could come in under 5/5 is a model-side hiccup in `suggest_outfit`/`create_fit_card`. The target was written for phrasing variance across *different* queries. If I had more time I'd add a second "matching query" scenario using a deliberately weaker-match phrasing (e.g. a synonym the data doesn't share a token with) to actually probe that target instead of a query I already know scores well.
+- **No criterion checks price-caption quality**, which is exactly how the `$45.0` formatting bug survived an entire "before" run with every criterion MET. I fixed the one instance I found, but a criterion only catches what it's written to catch — this class of "technically passes, reads oddly" issue could recur elsewhere (e.g. `brand: None` items, per the warning already in `search_listings`'s docstring) without a criterion ever flagging it.
+- **`trace.step()` prints unconditionally**, not just when `--trace` is passed (that's how `trace.py` was written in the starter). Every `ask` now prints the bracketed trace lines whether you asked for them or not. Not a correctness bug, but worth knowing if the plain output is supposed to stay clean.
+- **The loop always takes the first search result.** If a user wants the fit card for the 2nd or 5th match rather than the top one, there's no way to ask for that — `run_agent()` has no notion of "pick a different item."
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
