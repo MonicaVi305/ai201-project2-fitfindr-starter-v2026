@@ -250,6 +250,81 @@ $ python app.py ask 'vintage graphic tee under $30' --trace
   Fit card: Just scored this dreamy white, pink, and purple butterfly tee and I'm obsessed with the early 2000s energy. I’m styling it with baggy dark wash denim and chunky sneakers for an effortless off-duty look. Snagged it on depop for just $18.0 and honestly, it’s my new favorite piece for spring.
 ```
 
+**Real output from one try**, pasted as text, from `agent.py::run_agent`
+(criterion 2, "impossible query stops early", try 1):
+
+```
+$ python app.py ask 'designer ballgown size XXS under $5' --trace
+
+[1] parse_query
+      in:  designer ballgown size XXS under $5
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+[3] branch
+      →    no results, stopping before suggest_outfit
+
+  No listings matched that search. Try a broader description, a higher price ceiling, or a different size.
+```
+
+**Real output from one try**, pasted as text, from `agent.py::run_agent`
+(criterion 3, "state: selected item matches what reaches suggest_outfit", try 1):
+
+```
+$ python app.py ask 'wide-leg pants under $40' --trace
+
+[1] parse_query
+      in:  wide-leg pants under $40
+      out: dict with keys: description, size, max_price
+[2] search_listings
+      in:  dict with keys: description, size, max_price
+      out: 5 items: Corduroy Wide-Leg Pants — Rust, Wide-Leg Linen Trousers — Natural, Low-Rise Cargo Pants — Khaki … +2 more
+[3] suggest_outfit
+      in:  Corduroy Wide-Leg Pants — Rust ($32.0, depop)
+      out: **Outfit 1: 70s Coffee Run** *   **Top:** White ribbed tank top *   **Outerwear:** Vintage black denim jacket …
+
+  Found:    Corduroy Wide-Leg Pants — Rust — $32.0 on depop
+  Fit card: Can we talk about the burnt orange color on these wide-leg cords? I'm already picturing them with an oversized grey crewneck and combat boots for crisp morning coffee runs. Just snagged them on depop for $32 and they seriously scream 70s autumn.
+```
+
+`session["selected_item"]["id"]` is `lst_005` (the catalog's only ID for "Corduroy Wide-Leg Pants — Rust") — the same listing named in the trace's `suggest_outfit` input line above, confirming the id that reaches `search_listings` is the same one that reaches `suggest_outfit`, not a re-fetch.
+
+**Real output, all 5 tries**, pasted as text, from `agent.py::run_agent`
+(criterion 4, "fit card: same query, five tries", same item every time — `90s Track Jacket — Navy/White Stripe`, $45.0, poshmark):
+
+```
+try 1: Finally scored this navy and white 90s track jacket and it has major retro streetwear energy. Got it on Poshmark for just $45.0, and I'm already planning to throw it over a ribbed tank and baggy denim.
+
+try 2: Found this pristine 90s track jacket and immediately pictured it thrown over baggy denim and a white tank for that perfect off-duty look. Snagged it on Poshmark for just $45, and the navy and white stripes are giving major retro athletic energy. It’s about to be my daily go-to layer.
+
+try 3: Found this navy and white 90s track jacket and immediately pictured it thrown over a ribbed tank with baggy denim and combat boots. It’s got that perfect effortless vintage streetwear energy. Just grabbed it on Poshmark for $45 and I know I'm going to wear it all through fall.
+
+try 4: Found this crisp navy and white 90s track jacket and instantly pictured it thrown over baggy denim and chunky sneakers. It has that effortless retro athletic energy and feels straight out of a vintage lookbook. Snagged it on Poshmark for $45 and I'm never taking it off.
+
+try 5: Total off-duty model vibes with this navy and white 90s track jacket thrown over a ribbed tank and baggy denim. Snagged this piece of retro streetwear on Poshmark for just $45. It’s giving effortless early-morning coffee run energy.
+```
+
+All 5 are 2-3 sentences, mention the price exactly once each, and no two are word-for-word identical — though try 1's `$45.0` versus the clean `$45` in tries 2-5 is the price-formatting inconsistency flagged under Diagnoses below.
+
+**Real output from one try**, pasted as text, from `tools.py::search_listings`
+(criterion 5, "price ceiling respected" — every result for "under $25"):
+
+```
+$ python -c "from tools import search_listings; [print(i['title'], i['price']) for i in search_listings('Oversized Flannel Shirt Plaid Red/Black', max_price=25)]"
+
+Oversized Flannel Shirt — Plaid Red/Black 22.0
+Oversized College Crewneck — Faded Red 21.0
+Oversized Crewneck Sweatshirt — Vintage Navy 20.0
+Mesh Long-Sleeve Top — Black 15.0
+Vintage Polo Shirt — Forest Green 18.0
+Biker Shorts — Black, Shiny 14.0
+Bucket Hat — Reversible, Brown Plaid 14.0
+Tie-Dye Long Sleeve — Pastel 17.0
+```
+
+All 8 results are ≤ $25, and since `search_listings` has no randomness this held identically across all 5 tries.
+
 ---
 
 ## Verdicts and Diagnoses
