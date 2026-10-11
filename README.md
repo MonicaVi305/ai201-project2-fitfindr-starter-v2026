@@ -55,7 +55,7 @@ FitFindr takes a plain-language shopping query — e.g. "vintage graphic tee und
      on, and if you don't decide it here you'll discover it as a crash in
      Milestone 5. -->
 
-### `search_listings` 
+### `search_listings`  
 
 - **What it does:** Searches the mock listings dataset for items matching a text description, optionally filtered by size and a maximum price.
 - **Inputs:** `description` (str) — free-text keywords matched against each listing's title, description, category, style tags, and brand. `size` (str | None) — a size string filtered by exact token match (not substring), or `None` to skip size filtering. `max_price` (float | None) — the highest acceptable price, inclusive, or `None` to skip price filtering.
