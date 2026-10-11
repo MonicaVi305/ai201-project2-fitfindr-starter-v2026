@@ -299,6 +299,62 @@ No misses this round — all five criteria cleared their targets on the first re
      the same length, your branch isn't working — and this is the fastest way
      anyone will ever find that out. -->
 
+**empty search** python app.py ask ' ' --trace
+[1] parse_query
+      in:   
+      out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+[3] branch
+      →    no results, stopping before suggest_outfit
+
+  No listings matched that search. Try a broader description, a higher price ceiling, or a different size.
+
+0 model calls this session
+
+**empty wardrobe** 
+python app.py ask 'graphic tee' --empty-wardrobe --trace
+>> 
+(running with an empty wardrobe)
+[1] parse_query
+      in:  graphic tee
+      out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 6 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Mesh Long-Sleeve Top — Black … +3 more
+[3] suggest_outfit
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      out: **Direction 1: Low-Key Y2K Pop Star** *   **Bottoms:** Mid-rise Levi’s 501 medium-wash bootcut jeans.  *   **F…
+[4] create_fit_card
+      in:  **Direction 1: Low-Key Y2K Pop Star** *   **Bottoms:** Mid-rise Levi’s 501 medium-wash bootcut jeans.  *   **F…
+      out: Found this dreamy white baby tee with a purple and pink butterfly print that screams early 2000s pop star. Jus…
+
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   **Direction 1: Low-Key Y2K Pop Star**
+*   **Bottoms:** Mid-rise Levi’s 501 medium-wash bootcut jeans. 
+*   **Footwear:** Silver metallic Puma Speedcat sneakers.
+*   **Why it works:** The bootcut breaks up the tightness of the baby tee, and the silver kicks pull in the early-2000s pop energy without trying too hard. 
+
+**Direction 2: Soft Cottagecore Contrast**
+*   **Bottoms:** An olive green, raw-hem cargo midi skirt.
+*   **Footwear:** Chunky black Dr. Martens 1461 oxfords with white frilly lace-up socks.
+*   **Why it works:** The utility cargo skirt and heavy shoes ground the sweet, girly pink-and-purple butterfly print so it feels modern instead of literal costume-y.
+
+  Fit card: Found this dreamy white baby tee with a purple and pink butterfly print that screams early 2000s pop star. Just dropped it on depop for $18 before I change my mind and keep it. Style it with chunky loafers and an olive cargo skirt so it doesn't look too costume-y.
+
+0 model calls this session, 2 served from cache
+
+**model unavailable** (bad API key, triggered on purpose)
+$ GEMINI_API_KEY=invalid_broken_key_12345 AI201_CACHE=0 python app.py ask 'vintage graphic tee under $30' --trace
+
+[3] suggest_outfit
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      →    model unavailable, stopping
+
+  Outfit suggestions are unavailable right now: The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+
 **Happy path**
 
 ```
