@@ -29,18 +29,24 @@ import config
 
 _lines: list[str] = []
 _step_number = 0
+_enabled = False
 
 
 def start_trace() -> None:
-    """Clear the trace. Call this at the start of each run."""
-    global _step_number
+    """Start a trace: clear it and turn on live printing. Call this at the start of each run you want traced."""
+    global _step_number, _enabled
     _lines.clear()
     _step_number = 0
+    _enabled = True
 
 
 def step(name: str, inputs=None, returned=None, note: str = "") -> None:
     """
     Record one step of the loop.
+
+    A no-op unless start_trace() has been called — so run_agent() can call
+    step() unconditionally and only `--trace` (or run_eval.py) decides
+    whether anything is recorded or printed.
 
     Args:
         name:     what happened — usually a tool name.
@@ -49,6 +55,9 @@ def step(name: str, inputs=None, returned=None, note: str = "") -> None:
                   list of listings is fine.
         note:     an optional word on why, e.g. "branch: empty, stopping".
     """
+    if not _enabled:
+        return
+
     global _step_number
     _step_number += 1
 

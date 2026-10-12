@@ -523,6 +523,41 @@ after  (results/run_2026-10-04_1803_after.md): 25 fit cards, 0 with a trailing .
 
 All five criteria verdicts are unchanged (still 5/5 MET) — this fix didn't move any PASS/FAIL cell, because no criterion actually checked price formatting. It's a real, measured improvement to output quality that the existing criteria were blind to, which is itself worth noting under "What's Still Broken" below.
 
+### Second improvement
+
+**What I changed:** `trace.step()` in `trace.py` used to print every step unconditionally, with no way to turn it off. Added an `_enabled` flag that's `False` until `start_trace()` is called; `step()` now returns immediately (recording nothing, printing nothing) when it isn't. `start_trace()` sets `_enabled = True`, same as before, so nothing that already called it changes behavior.
+
+**Which failure it was meant to fix:** Not a criterion miss either — flagged under "What's Still Broken" below (in the version before this fix) as a real behavior bug, separate from the five scored criteria: `python app.py ask '...'` without `--trace` was printing the full bracketed trace anyway, contradicting the CLI's own `--trace` help text ("print the loop step by step") and the premise that trace output is opt-in.
+
+### Run Log — After (round 2)
+
+| Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
+|---|---|---|---|---|---|---|---|
+| 1. Matching query completes | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops early | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. State: selected item matches what reaches `suggest_outfit` | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card: 2-4 sentences, price once, no duplicates | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Price ceiling respected | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+
+Full output: `results/run_2026-10-11_2300_after2.md` (`python run_eval.py --label after2`, caching off, temperature 0.9).
+
+**Did it help, and how do I know:** Yes, but not measurably on the criteria table — and that's expected, not a gap in the fix. `run_eval.py` always calls `start_trace()` before every try regardless of this flag, so none of the 5 criteria could ever have been sensitive to it; all 5 stayed MET (5/5), unchanged from round 1. The actual effect only shows up in the code path this fix touches — `app.py`'s plain `ask` command without `--trace`:
+
+```
+before:  $ python app.py ask 'graphic tee'
+         [1] parse_query
+               in:  graphic tee
+               out: dict with keys: description, size, max_price
+         [2] search_listings (via MCP)
+         ... (full bracketed trace, every time, whether asked for or not)
+
+after:   $ python app.py ask 'graphic tee'
+
+           Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+         ... (no trace lines — clean output, exactly like before --trace existed)
+```
+
+`--trace` still prints the full step-by-step trace identically to before. This is the same shape of result as the first improvement: a real, verified fix to something the five criteria are structurally blind to (none of them test *what gets printed*, only what the session ends up containing), so "all 5 still MET" is the correct and expected outcome here, not a sign the fix did nothing.
 
 ---
 
@@ -532,7 +567,7 @@ No criterion is currently missed, so nothing here is a failed target — these a
 
 - **Criterion 1's 4-of-5 target has never actually been exercised.** `scenarios.py` reruns the same query 5 times, and `search_listings` has no randomness, so the only way this run could come in under 5/5 is a model-side hiccup in `suggest_outfit`/`create_fit_card`. The target was written for phrasing variance across *different* queries. If I had more time I'd add a second "matching query" scenario using a deliberately weaker-match phrasing (e.g. a synonym the data doesn't share a token with) to actually probe that target instead of a query I already know scores well.
 - **No criterion checks price-caption quality**, which is exactly how the `$45.0` formatting bug survived an entire "before" run with every criterion MET. I fixed the one instance I found, but a criterion only catches what it's written to catch — this class of "technically passes, reads oddly" issue could recur elsewhere (e.g. `brand: None` items, per the warning already in `search_listings`'s docstring) without a criterion ever flagging it.
-- **`trace.step()` prints unconditionally**, not just when `--trace` is passed (that's how `trace.py` was written in the starter). Every `ask` now prints the bracketed trace lines whether you asked for them or not. Not a correctness bug, but worth knowing if the plain output is supposed to stay clean.
+- ~~`trace.step()` prints unconditionally, not just when `--trace` is passed.~~ **Fixed as the second improvement above** — `step()` is now a no-op until `start_trace()` turns it on.
 - **The loop always takes the first search result.** If a user wants the fit card for the 2nd or 5th match rather than the top one, there's no way to ask for that — `run_agent()` has no notion of "pick a different item."
 
 <!-- ═════════════════════════════════════════════════════════════════════
