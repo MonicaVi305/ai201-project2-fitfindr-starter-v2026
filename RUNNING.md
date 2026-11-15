@@ -246,3 +246,59 @@ history is what shows your criteria existed before your results did.
 units.
 
 `results/` is deliberately **not** in `.gitignore`.
+
+---
+
+## Capstone run path — local, with logs (Path B)
+
+FitFindr runs as an HTTP service on your own machine, and every request it
+handles is recorded in `logs/requests.jsonl`. It is not hosted anywhere.
+
+**You need:** Python 3.13, a Gemini API key in `.env` (`GEMINI_API_KEY=...`,
+see `.env.example`), and the project's own `.venv` — the `mcp` package is only
+installed there, so a bare global `python` will fail every query.
+
+**One-time setup** (PowerShell, from the repo root):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env         # then paste your key into .env
+```
+
+**Start it — the single command:**
+
+```powershell
+$env:AI201_CACHE = "0"; python serve.py
+```
+
+(bash: `AI201_CACHE=0 python serve.py`.) `AI201_CACHE=0` turns the answer cache
+off so every request is a real model call and the token counts in the log are
+real. Leave it off the command if you only want to click around. It listens on
+port 5000, or whatever `PORT` is set to.
+
+**Ask it** (single quotes, always):
+
+```powershell
+curl.exe -X POST http://127.0.0.1:5000/ask -H "Content-Type: application/json" -d '{\"query\": \"vintage graphic tee under $30\"}'
+```
+
+or use the probe, which sends requests and reads the log back:
+
+```powershell
+python probe.py --n 3 --query 'vintage graphic tee under $30'
+python probe.py --raw '{"query": 5}'        # a deliberately bad request -> HTTP 400
+```
+
+**Read the log:** `logs/requests.jsonl` is one JSON object per line. Fields are
+documented at the top of `request_log.py`.
+
+**Things that will trip you:**
+
+| What you see | What it is |
+|---|---|
+| Every request takes ~2 s longer than the log says | You used `localhost`. On Windows it tries IPv6 first and times out before falling back. Use `127.0.0.1` |
+| `[rate limit] ... Waiting 24s` in the server window | The free tier allows 15 model requests a minute; ten runs in a row will hit it. Expected |
+| `MCPError ... TaskGroup` on every request | You started it with global `python`, not the `.venv` one |
+| `gunicorn serve:app` fails on Windows | `gunicorn` needs Unix. On Windows use `python serve.py`; `gunicorn serve:app` is the host command |
