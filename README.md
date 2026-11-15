@@ -621,3 +621,21 @@ No criterion is currently missed, so nothing here is a failed target — these a
 ---
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**
+
+---
+
+## Capstone
+
+**System extended**
+
+FitFindr (this repository, the same one submitted for units 3 and 4): the three-tool agent in `agent.py::run_agent` that searches the 40-listing catalog (via MCP), suggests an outfit, and writes a fit card.
+
+**The Shape**
+
+Shape C, the operational scaffolding. What's new is the service layer around the agent in `serve.py`, which shipped with no logging, no timing and no counting. I'm adding (1) a structured, one-JSON-object-per-request log in `logs/requests.jsonl`, written for every outcome including rejected input and crashes; (2) stricter input validation on `POST /ask` so malformed requests get a 400 that names the problem; (3) per-request model-call and token counts, taken from `generate.py`, so cost is a measured field in the log rather than a pricing-page guess; and (4) a one-command local run path documented in `RUNNING.md`. The agent's tools, search, prompts and loop are untouched.
+
+**Out of scope**
+
+- I'm not deploying to a hosting provider. The run path is local-with-logs (Path B); `gunicorn` does not run on Windows anyway.
+- I'm not touching `search_listings`, the query parser, the prompts or the planning loop. The agent's behavior stays as it was.
+- I'm not adding a queue, a request timeout that kills a run mid-flight, async workers, or a user interface. `serve.py` stays one-request-at-a-time on purpose.
