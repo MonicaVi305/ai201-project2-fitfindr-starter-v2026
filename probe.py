@@ -30,7 +30,7 @@ def post(url, body: bytes):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default="http://localhost:5000/ask")
+    ap.add_argument("--url", default="http://127.0.0.1:5000/ask")
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--query", default="vintage graphic tee under $30")
     ap.add_argument("--raw", help="send this string as the request body instead of a query")
