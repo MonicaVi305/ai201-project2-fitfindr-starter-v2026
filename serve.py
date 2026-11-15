@@ -27,15 +27,17 @@ web server has to be. The reason is worth reading before you deploy: see the
 note above `_one_at_a_time` below — it also decides which gunicorn worker you
 can use.
 
-⚠️ There is deliberately NO logging, NO timing and NO request counting in this
-file. That is unit 9's follow-along: you instrument this yourself, first, and
-then deploy it. A structured log you were handed teaches you nothing about
-what belongs in one — and the timing field is the one everybody skips.
+CAPSTONE: this file is now instrumented. Every POST /ask writes one JSON line
+to logs/requests.jsonl (see request_log.py for the fields) and returns a
+`request_id`. Bad input gets a 400 that names the problem; a crash gets a 500
+and still leaves a record.
 """
 
 import os
 import sys
 import threading
+import time
+import uuid
 
 # config first, and before anything that talks to the model: it loads your .env
 # and fixes the Windows console encoding for every module that imports it.
@@ -43,8 +45,12 @@ import config  # noqa: F401
 
 from flask import Flask, jsonify, request
 
+import generate
 from agent import run_agent
+from request_log import log_request
 from utils.data_loader import get_example_wardrobe
+
+MAX_QUERY_CHARS = 300
 
 app = Flask(__name__)
 
@@ -97,6 +103,45 @@ def health():
     return jsonify({"status": "ok"})
 
 
+def _validate(payload):
+    """
+    Returns (query, wardrobe, wardrobe_label, None) or (query, None, label, message).
+    """
+    if not isinstance(payload, dict):
+        return None, None, None, (
+            "Send a JSON object, e.g. "
+            '{"query": "vintage graphic tee under $30"}'
+        )
+    raw = payload.get("query")
+    if not isinstance(raw, str) or not raw.strip():
+        return None, None, None, (
+            "Send JSON with a non-empty string 'query' field, e.g. "
+            '{"query": "vintage graphic tee under $30"}'
+        )
+    query = raw.strip()
+    if len(query) > MAX_QUERY_CHARS:
+        return query, None, None, (
+            f"'query' is {len(query)} characters; the limit is {MAX_QUERY_CHARS}."
+        )
+    wardrobe = payload.get("wardrobe")
+    if wardrobe is None:
+        return query, get_example_wardrobe(), "example", None
+    if not isinstance(wardrobe, dict) or not isinstance(wardrobe.get("items"), list):
+        return query, None, "invalid", (
+            "'wardrobe' must be an object with an 'items' list, or be left out."
+        )
+    return query, wardrobe, f"custom:{len(wardrobe['items'])} items", None
+
+
+def _outcome(session):
+    error = session.get("error")
+    if not error:
+        return "ok"
+    if error.startswith("No listings matched"):
+        return "no_results"
+    return "model_unavailable"
+
+
 @app.post("/ask")
 def ask():
     """
@@ -105,29 +150,25 @@ def ask():
     In:   {"query": "...", "wardrobe": {...}}   wardrobe optional — leave it
                                                 out and you get the same
                                                 example wardrobe the CLI uses.
-    Out:  the session dict from run_agent(), as JSON.
+    Out:  the session dict from run_agent(), as JSON, plus a `request_id`.
     """
-    payload = request.get_json(silent=True) or {}
-    query = (payload.get("query") or "").strip()
-    if not query:
+    started = time.perf_counter()
+    request_id = uuid.uuid4().hex[:8]
+    log = {"request_id": request_id}
+
+    payload = request.get_json(silent=True)
+    query, wardrobe, label, problem = _validate(payload)
+    log.update(query=query if query is not None else
+               (payload.get("query") if isinstance(payload, dict) else None),
+               wardrobe=label)
+
+    if problem:
         # 400 rather than a stack trace: the caller can act on this one.
-        return jsonify({"error": "Send JSON with a 'query' field, e.g. "
-                                 '{"query": "vintage graphic tee under $30"}'}), 400
+        log_request(**log, status_code=400, outcome="bad_request", error=problem,
+                    duration_ms=round((time.perf_counter() - started) * 1000))
+        return jsonify({"error": problem, "request_id": request_id}), 400
 
-    wardrobe = payload.get("wardrobe")
-    if not isinstance(wardrobe, dict):
-        wardrobe = get_example_wardrobe()
-
-    # A queued request should look like a queued request. Without this the
-    # second caller just sits there, and "slow" and "waiting its turn" are
-    # indistinguishable from the outside — which is how people conclude the
-    # deployment is broken when it is behaving exactly as designed.
-    #
-    # This is NOT the logging you add in the follow-along. It prints nothing
-    # on the normal path, carries no timing and counts nothing; it says only
-    # that this request had to wait. `locked()` can be a moment out of date,
-    # so the note is occasionally missed — which costs nothing, because
-    # nothing depends on it.
+    # A queued request should look like a queued request.
     if _one_at_a_time.locked():
         print(
             "  [serve] another request is still running. This one is waiting "
@@ -138,18 +179,45 @@ def ask():
 
     failure = None
     session = None
+    wait_started = time.perf_counter()
     with _one_at_a_time:
+        queue_wait_ms = round((time.perf_counter() - wait_started) * 1000)
+        # Counters in generate.py are process-wide; inside the lock the
+        # difference is this run's own spend.
+        calls_before = generate.call_count()
+        tokens_before = generate.token_counts()
         try:
             session = run_agent(query, wardrobe)
         except Exception as exc:  # noqa: BLE001 — a 500 with a sentence beats a hang
             failure = f"{type(exc).__name__}: {exc}"
+        calls = generate.call_count() - calls_before
+        tokens_after = generate.token_counts()
+
+    log.update(
+        queue_wait_ms=queue_wait_ms,
+        model_calls=calls,
+        prompt_tokens=tokens_after["prompt"] - tokens_before["prompt"],
+        output_tokens=tokens_after["output"] - tokens_before["output"],
+    )
 
     # Outside the lock: building a response is not work the next caller should
     # be waiting on.
     if failure is not None:
-        return jsonify({"error": failure}), 500
+        log_request(**log, status_code=500, outcome="server_error", error=failure,
+                    duration_ms=round((time.perf_counter() - started) * 1000))
+        return jsonify({"error": failure, "request_id": request_id}), 500
 
-    return jsonify(session)
+    selected = session.get("selected_item") or {}
+    log_request(
+        **log,
+        status_code=200,
+        outcome=_outcome(session),
+        selected_item=selected.get("id"),
+        fit_card=session.get("fit_card"),
+        error=session.get("error"),
+        duration_ms=round((time.perf_counter() - started) * 1000),
+    )
+    return jsonify({**session, "request_id": request_id})
 
 
 if __name__ == "__main__":
