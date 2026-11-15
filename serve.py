@@ -51,6 +51,10 @@ from request_log import log_request
 from utils.data_loader import get_example_wardrobe
 
 MAX_QUERY_CHARS = 300
+# A run needs 2 model calls. If the rate limiter would make it wait longer than
+# this, answer 429 + Retry-After now instead of hanging the caller.
+MAX_LIMITER_WAIT_S = 5.0
+CALLS_PER_RUN = 2
 
 app = Flask(__name__)
 
@@ -184,6 +188,20 @@ def ask():
         queue_wait_ms = round((time.perf_counter() - wait_started) * 1000)
         # Counters in generate.py are process-wide; inside the lock the
         # difference is this run's own spend.
+        wait_s = generate.seconds_until_slot(CALLS_PER_RUN)
+        if wait_s > MAX_LIMITER_WAIT_S:
+            retry_after = int(wait_s) + 1
+            msg = (f"The model's rate limit is used up for now. Try again in "
+                   f"{retry_after} seconds.")
+            log_request(**log, status_code=429, outcome="rate_limited", error=msg,
+                        queue_wait_ms=queue_wait_ms, model_calls=0, prompt_tokens=0,
+                        output_tokens=0,
+                        duration_ms=round((time.perf_counter() - started) * 1000))
+            resp = jsonify({"error": msg, "retry_after": retry_after,
+                            "request_id": request_id})
+            resp.status_code = 429
+            resp.headers["Retry-After"] = str(retry_after)
+            return resp
         calls_before = generate.call_count()
         tokens_before = generate.token_counts()
         try:

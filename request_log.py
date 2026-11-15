@@ -11,7 +11,7 @@ Fields (all present on every record; unknown values are null):
     ts              UTC time the request finished, ISO 8601
     request_id      short random id, also returned to the caller
     status_code     HTTP status returned
-    outcome         ok | no_results | model_unavailable | bad_request | server_error
+    outcome         ok | no_results | model_unavailable | bad_request | rate_limited | server_error
     query           what came in (truncated to 300 chars)
     wardrobe        "example" | "custom:<n items>" | "invalid"
     selected_item   listing id the agent picked, or null

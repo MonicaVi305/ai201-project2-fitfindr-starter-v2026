@@ -122,6 +122,21 @@ def _wait_for_slot() -> None:
         _call_times[:] = [t for t in _call_times if time.monotonic() - t < 60.0]
 
 
+def seconds_until_slot(calls: int = 1) -> float:
+    """
+    How long `calls` more requests would have to sleep in _wait_for_slot right now.
+    0.0 means they would go straight through. Used by serve.py to refuse a run
+    that would stall, instead of holding the connection open.
+    """
+    now = time.monotonic()
+    recent = sorted(t for t in _call_times if now - t < 60.0)
+    free = config.REQUESTS_PER_MINUTE - len(recent)
+    if free >= calls:
+        return 0.0
+    # the (calls - free)th oldest call must age out of the window
+    return max(0.0, 60.0 - (now - recent[calls - free - 1]) + 0.1)
+
+
 def _check_budget() -> None:
     global _budget_warned
     if _session_calls < config.SESSION_REQUEST_BUDGET:
