@@ -131,3 +131,80 @@ parsing the ceiling out of the query, not in the filter.
      A number you missed stays where it is, gets diagnosed, and gets a fix
      attempted. That's where the points are.
      ───────────────────────────────────────────────────────────────────────── -->
+
+---
+
+# Capstone criteria — the service layer (Shape C)
+
+Written before any capstone results existed. Criteria 1–4 are about what is new
+(`serve.py` instrumentation, validation and cost fields); criterion 5 guards the
+original agent against regression.
+
+**One trial** = against a freshly started `AI201_CACHE=0 python serve.py`, send
+10 matching queries (`vintage graphic tee under $30`), 5 impossible queries
+(`designer ballgown size XXS under $5`) and 6 malformed requests (body `not json`;
+body `[1,2]`; `{"query": 5}`; `{"query": ""}`; a 400-character query;
+`{"query": "tee", "wardrobe": "nope"}`), 21 requests in all, then read
+`logs/requests.jsonl` back. Three trials, no code changes between them.
+
+## 1. Every request leaves a complete log record
+
+Of the 21 requests in a trial, every one has a record in `logs/requests.jsonl`
+(matched by the `request_id` the server returned) that contains all 14 named
+fields — 21 of 21.
+
+**Why this target:** a log that is right 20 times in 21 is exactly the one you
+can't trust when diagnosing a failure, because the missing run is the one you
+wanted. Writing a record is one append on code I wrote, with no model in it, so
+there is no excuse for less than all. 14 fields because `request_log.FIELDS`
+defines 14 and a record missing a key means a code path skipped the logger.
+
+## 2. Malformed input gets a 400 that says what's wrong, never a 500
+
+For each of the 6 malformed requests in a trial, the response is HTTP 400, its
+body has a non-empty `error` string, and the log record has `outcome:
+bad_request` — 6 of 6.
+
+**Why this target:** the caller can fix a 400 and can do nothing with a 500, and
+a stack trace in a response leaks internals. `_validate` is plain type checks,
+so any miss means a malformed shape I didn't think of, which is the thing this
+criterion exists to find. The six cases are the ones I could name; a stricter
+target would need cases I haven't thought of.
+
+## 3. Cost fields are recorded correctly for paid runs and for free runs
+
+In a trial, each of the 10 matching runs has `model_calls` ≥ 2, `prompt_tokens`
+> 0 and `output_tokens` > 0, and each of the 5 impossible runs has `model_calls`
+= 0 and both token fields = 0 — 15 of 15.
+
+**Why this target:** the cost figure I'll quote for a hundred users comes
+straight from these fields, so a zero on a run that really called the model
+makes the cost look lower than it is. The impossible-query case matters just as
+much: that path makes no model call, so anything non-zero would mean the
+counters are leaking between requests. The per-request deltas depend on the
+one-at-a-time lock, so this also checks the lock holds.
+
+## 4. Matching queries are fast enough to feel interactive
+
+Of the 10 matching runs in a trial, at least 9 have `duration_ms` under 6000.
+
+**Why this target:** in the 10 runs I measured for the cost number, nine took
+2.2–4.5 s and one took 49 s, and the 49 s run was the rate limiter and a retry
+(`generate.py`), not the agent. 6 s leaves headroom over my worst normal run
+(4.5 s) while still counting a retry as slow. I allow one slow run in ten because
+the free tier's 15-calls-a-minute limit means 10 back-to-back runs (20 calls)
+may cross it; I would not allow two. This is the criterion I expect to be
+closest to failing.
+
+## 5. The original agent still works through the service (regression)
+
+In a trial, each of the 10 matching runs returns HTTP 200 with `error` null, a
+non-empty `fit_card`, and `selected_item` set; each of the 5 impossible runs
+returns HTTP 200 with `fit_card` null and an `error` containing "broader
+description" — 15 of 15.
+
+**Why this target:** this is the behaviour the unit 3 and 4 criteria already
+promised, now reached through HTTP. The impossible path is deterministic and the
+matching path has a model in it, but the previous 25-of-25 runs of the matching
+query all completed, so I expect all of them. If I extended the system and
+broke the original, this is where it shows.
