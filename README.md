@@ -684,3 +684,100 @@ A hundred people a day, one query each: 100 runs x 685 tokens = 68,500 tokens a 
 **Testing RUNNING.md on myself**
 
 I cloned the committed repo into a clean folder, created a new `.venv`, installed `requirements.txt`, copied in my `.env`, and followed the start command and the probe command exactly as written. It worked on the first try, so the missing piece I found was one I had to fix elsewhere: while measuring, every request showed about 2 s of client-side time that the log did not (a 400 logged `duration_ms` 0 but took 2.1 s to come back). That was `localhost` resolving to IPv6 first on Windows; `probe.py` and `RUNNING.md` now use `127.0.0.1`. I also confirmed the PowerShell `curl.exe` command in `RUNNING.md` against the fresh clone.
+
+**Run Log — Before**
+
+Three trials of the 21-request set defined at the top of the Capstone section of `criteria.md`, each against a freshly started `AI201_CACHE=0 python serve.py`, run by `python run_capstone.py --label before --trials 3`. Every request and its per-criterion result is in `results/capstone_before.json`; the table is `results/capstone_before.md`.
+
+| Criterion | Target | Trial 1 | Trial 2 | Trial 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Every request leaves a complete log record | 21 of 21 | 21/21 | 21/21 | 21/21 | MET |
+| 2. Malformed input gets a 400 that says what's wrong, logged `bad_request` | 6 of 6 | 6/6 | 6/6 | 6/6 | MET |
+| 3. Cost fields right for paid runs and free runs | 15 of 15 | 15/15 | 15/15 | 15/15 | MET |
+| 4. Matching run under 6000 ms | 9 of 10 | 9/10 | 9/10 | 8/10 | MISSED |
+| 5. Original agent still works through the service | 15 of 15 | 15/15 | 15/15 | 15/15 | MET |
+
+Real output, from trial 1 unless noted. Each line is a record the service wrote to `logs/requests.jsonl` via `request_log.py::log_request`, called from `serve.py::ask`.
+
+Criterion 1 (a complete record: all 14 fields present, matched by `request_id`):
+
+```json
+{"ts": "2026-11-15T22:24:52.087+00:00", "request_id": "dd1bea66", "status_code": 200, "outcome": "ok", "query": "vintage graphic tee under $30", "wardrobe": "example", "selected_item": "lst_002", "fit_card": "Found the ultimate early 2000s butterfly baby tee with the dreamiest pink and purple gradient graphics. Just scored it for only $18 over on depop and it’s giving major mall-rat nostalgia. Can't wait t…", "error": null, "duration_ms": 4604, "queue_wait_ms": 0, "model_calls": 2, "prompt_tokens": 503, "output_tokens": 226}
+```
+
+Criterion 2 (the six malformed requests, as logged; every response was HTTP 400, from `serve.py::_validate`):
+
+```json
+{"ts": "2026-11-15T22:25:59.698+00:00", "request_id": "0f105613", "status_code": 400, "outcome": "bad_request", "query": null, "wardrobe": null, "selected_item": null, "fit_card": null, "error": "Send a JSON object, e.g. {\"query\": \"vintage graphic tee under $30\"}", "duration_ms": 0, "queue_wait_ms": null, "model_calls": null, "prompt_tokens": null, "output_tokens": null}
+{"ts": "2026-11-15T22:25:59.719+00:00", "request_id": "072b9b3b", "status_code": 400, "outcome": "bad_request", "query": null, "wardrobe": null, "selected_item": null, "fit_card": null, "error": "Send a JSON object, e.g. {\"query\": \"vintage graphic tee under $30\"}", "duration_ms": 0, "queue_wait_ms": null, "model_calls": null, "prompt_tokens": null, "output_tokens": null}
+{"ts": "2026-11-15T22:25:59.734+00:00", "request_id": "72adc3db", "status_code": 400, "outcome": "bad_request", "query": "5", "wardrobe": null, "selected_item": null, "fit_card": null, "error": "Send JSON with a non-empty string 'query' field, e.g. {\"query\": \"vintage graphic tee under $30\"}", "duration_ms": 0, "queue_wait_ms": null, "model_calls": null, "prompt_tokens": null, "output_tokens": null}
+{"ts": "2026-11-15T22:25:59.750+00:00", "request_id": "7df85655", "status_code": 400, "outcome": "bad_request", "query": "", "wardrobe": null, "selected_item": null, "fit_card": null, "error": "Send JSON with a non-empty string 'query' field, e.g. {\"query\": \"vintage graphic tee under $30\"}", "duration_ms": 0, "queue_wait_ms": null, "model_calls": null, "prompt_tokens": null, "output_tokens": null}
+{"ts": "2026-11-15T22:25:59.767+00:00", "request_id": "12ab3bf0", "status_code": 400, "outcome": "bad_request", "query": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…", "wardrobe": null, "selected_item": null, "fit_card": null, "error": "'query' is 400 characters; the limit is 300.", "duration_ms": 0, "queue_wait_ms": null, "model_calls": null, "prompt_tokens": null, "output_tokens": null}
+{"ts": "2026-11-15T22:25:59.783+00:00", "request_id": "19b517c8", "status_code": 400, "outcome": "bad_request", "query": "tee", "wardrobe": "invalid", "selected_item": null, "fit_card": null, "error": "'wardrobe' must be an object with an 'items' list, or be left out.", "duration_ms": 0, "queue_wait_ms": null, "model_calls": null, "prompt_tokens": null, "output_tokens": null}
+```
+
+Criterion 3 (a paid run is the criterion 1 line above; a free run, no model call, is below):
+
+```json
+{"ts": "2026-11-15T22:25:56.963+00:00", "request_id": "8dc4048d", "status_code": 200, "outcome": "no_results", "query": "designer ballgown size XXS under $5", "wardrobe": "example", "selected_item": null, "fit_card": null, "error": "No listings matched that search. Try a broader description, a higher price ceiling, or a different size.", "duration_ms": 715, "queue_wait_ms": 0, "model_calls": 0, "prompt_tokens": 0, "output_tokens": 0}
+```
+
+Criterion 4 (`duration_ms` of the ten matching runs, from the log; `serve.py::ask`):
+
+```
+trial 1: [4604, 2679, 2341, 2436, 2239, 2179, 2614, 44870, 2301, 2328]
+trial 2: [3852, 2253, 2724, 2199, 2582, 49237, 2699, 2099, 2275, 2073]
+trial 3: [3756, 2618, 2275, 36585, 2233, 2310, 2441, 11633, 2499, 2416]
+```
+
+The slow trial-3 runs, as logged (`model_calls` 3 means a retry):
+
+```json
+{"ts": "2026-11-15T22:28:01.851+00:00", "request_id": "be6f27b0", "status_code": 200, "outcome": "ok", "query": "vintage graphic tee under $30", "wardrobe": "example", "selected_item": "lst_002", "fit_card": "Found this dreamy little butterfly tee and I am immediately channeling my inner 2003 pop star. Pair it with baggy dark denim and chunky sneakers for the ultimate off-duty look. Just listed this for $1…", "error": null, "duration_ms": 36585, "queue_wait_ms": 0, "model_calls": 3, "prompt_tokens": 482, "output_tokens": 191}
+{"ts": "2026-11-15T22:28:20.521+00:00", "request_id": "e73a9384", "status_code": 200, "outcome": "ok", "query": "vintage graphic tee under $30", "wardrobe": "example", "selected_item": "lst_002", "fit_card": "Just scored this little white baby tee with the dreamiest pink and purple butterfly print. It’s giving total early 2000s off-duty model, especially paired with baggy dark-wash denim and chunky sneaker…", "error": null, "duration_ms": 11633, "queue_wait_ms": 0, "model_calls": 2, "prompt_tokens": 475, "output_tokens": 199}
+```
+
+Criterion 5: the matching run under criterion 1 has `error` null, a `fit_card` and a `selected_item`; the impossible run under criterion 3 has `fit_card` null and an `error` naming what to change.
+
+**Verdicts and Diagnoses**
+
+- **1. MET** (21/21, 21/21, 21/21). Every request, including all six rejected ones, has a complete record.
+- **2. MET** (6/6 x 3). No 500s; all six shapes got a 400 with a message.
+- **3. MET** (15/15 x 3). Paid runs show 2 calls and tokens; free runs show 0, so counters are not leaking between requests.
+- **4. MISSED** (9/10, 9/10, 8/10 against a target of 9 of 10). Trial 3 fell below. The target has to hold, so this is a miss even though two trials met it.
+- **5. MET** (15/15 x 3). The original agent still works through HTTP.
+
+**Diagnosis of criterion 4.** Not the agent and not the model's raw speed: in every trial most runs took 2.1 to 4.6 s, and the slow ones took 11.6 to 49.2 s. The stage is `generate.py`, inside the model call, and there are two mechanisms. (a) `_wait_for_slot` sleeps when 15 calls have been made in the past 60 s. Ten matching runs are 20 calls, so a later run in the trial hits the limit and sleeps (trial 1: 44.9 s with `model_calls` 2; trial 3: 11.6 s with `model_calls` 2). (b) The service pushes back with a 429 before the local counter says it should, and `generate()` sleeps the hinted time and retries (the `model_calls` 3 runs: 49.2 s, 36.6 s). My best explanation for (b), which I inferred and did not directly verify, is that each trial starts a new server process whose `_call_times` list is empty, while the API's per-minute window still contains the previous trial's calls, which the local limiter cannot see. Both sleeps happen inside `serve.py`'s one-at-a-time lock, so the caller just sees a long hang and the log shows nothing that says why. It is one problem with five symptoms: the free tier's 15-per-minute quota against 2 calls per run.
+
+**The Improvement**
+
+**What I changed:** one change, aimed at mechanism (a). `generate.seconds_until_slot()` reports how long the limiter would sleep, and `serve.py::ask` now calls it before running the agent. If the wait would exceed 5 s, the service refuses immediately with HTTP 429, a `Retry-After` header, a message, and a log record with `outcome: rate_limited`, instead of holding the connection for up to 45 s.
+
+**Run Log — After** (same set, same scorer, `python run_capstone.py --label after --trials 3`, `results/capstone_after.json`), side by side with before:
+
+| Criterion | Target | Before (1/2/3) | After (1/2/3) | Verdict after |
+|---|---|---|---|---|
+| 1. Complete log record | 21 of 21 | 21 / 21 / 21 | 21 / 21 / 21 | MET |
+| 2. Malformed input gets a 400 | 6 of 6 | 6 / 6 / 6 | 6 / 6 / 6 | MET |
+| 3. Cost fields right | 15 of 15 | 15 / 15 / 15 | 12 / 12 / 15 | MISSED |
+| 4. Matching run under 6000 ms | 9 of 10 | 9 / 9 / 8 | 10 / 9 / 8 | MISSED (trial 3) |
+| 5. Original agent still works | 15 of 15 | 15 / 15 / 15 | 7 / 7 / 15 | MISSED |
+
+Matching-run `duration_ms` after: trial 1 [3753, 2428, 2360, 2541, 2795, 2202, 3199, 1, 1, 1]; trial 2 [27277, 3085, 2304, 2515, 2160, 2352, 2419, 1, 1, 1]; trial 3 [44626, 2946, 2433, 2786, 2901, 2407, 2620, 43456, 2856, 3010].
+
+**Did it help? No. It made things worse, and the numbers flatter it.** Criterion 4 reads 10/10 in trial 1, but only because three of the ten matching runs were refused in 1 ms, which is under 6000 ms. Those runs did not produce a fit card, so criterion 5 dropped from 15/15 to 7/15 in trials 1 and 2, and criterion 3 dropped to 12/15 (a refused paid run has no tokens). I counted the 429s: in trials 1 and 2, 3 matching and all 5 impossible queries were refused. The impossible queries make no model call at all, so refusing them was a mistake in my change: I put the check ahead of the agent and assumed every request needs two calls, but an empty search needs none. Trial 3 had no 429s and two runs of 44.6 s and 43.5 s, so the unpredictable pushback (mechanism b) is untouched. Net: I traded a long wait for a refusal, so the criterion looks better and the service is worse. I left the change in the code, and I'm flagging it here instead of rewriting history; it should not ship as is.
+
+**What's Still Broken**
+
+- **Criterion 4 is still missed.** Fix 1: move the admission check inside the agent, after `search_listings` returns something, so empty searches are never refused (it needs a hook in `agent.py`, which this unit scoped out, so I stopped at measuring the problem). Fix 2: stop treating the 15-per-minute limit as a latency problem a service can fix. At 2 calls per run the free tier supports about 7 runs a minute, so the real answer is a higher quota, or a queue that tells the caller its position.
+- **Criteria 3 and 5 are now missed because of my own change**, for the reason above. Reverting the commit "Capstone M6: fail fast..." restores 15/15 on both and brings back the criterion 4 miss. I did not revert it so the before and after evidence stays tied to the code in the history.
+- **The 6000 ms target is too easy to game**, as the after run showed: a refusal counts as fast. I'd tighten criterion 4 to count only runs that returned a fit card, and add a log field for time spent in rate-limit sleeps so a slow run explains itself.
+- **`model_unavailable` and `server_error` are coded but I never triggered them.** I'd break the key on purpose and send a request that crashes the agent, so both outcomes show up in the log.
+
+If I had another unit, the first thing I'd do is add a `limiter_wait_ms` field to every log record. It would show the cause of each slow run directly instead of my inferring it, and every other fix depends on knowing that.
+
+**How I Used AI**
+
+I used Claude Code for essentially all of this unit's work, and one point needs saying plainly: **I did not write the five Capstone criteria. I ran out of time and asked Claude to write them, which the brief says not to do.** Claude wrote them in `criteria.md` after reading the code and my measured numbers (criterion 4's 6000 ms came from the nine-fast, one-slow cost runs) and committed them (`add capstone criteria`) before any results existed. I have not defended or revised them myself, so treat them as Claude's reading of my system.
+
+Claude also scoped the extension (Shape C) and wrote `request_log.py`, the `serve.py` changes, `probe.py` and `run_capstone.py`. It ran the trials and drafted this write-up. What I would check first: the improvement did not work, and Claude reported that rather than adjusting the scorer until it passed. It found that the 429s hit the impossible queries only when it counted them, which is the kind of thing worth verifying yourself.

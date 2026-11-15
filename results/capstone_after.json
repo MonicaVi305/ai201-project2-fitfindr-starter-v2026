@@ -1,0 +1,662 @@
+[
+ {
+  "c1": "21/21",
+  "c2": "6/6",
+  "c3": "12/15",
+  "c4": "10/10",
+  "c5": "7/15",
+  "n": [
+   21,
+   6,
+   12,
+   10,
+   7
+  ],
+  "detail": [
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "701950b1",
+    "logged_complete": true,
+    "duration_ms": 3753,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "f43e8778",
+    "logged_complete": true,
+    "duration_ms": 2428,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "a96ee215",
+    "logged_complete": true,
+    "duration_ms": 2360,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "3db75ada",
+    "logged_complete": true,
+    "duration_ms": 2541,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "4c361893",
+    "logged_complete": true,
+    "duration_ms": 2795,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "d890dda9",
+    "logged_complete": true,
+    "duration_ms": 2202,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "a981af68",
+    "logged_complete": true,
+    "duration_ms": 3199,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 429,
+    "request_id": "2655214c",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": false,
+    "c4": true,
+    "c5": false,
+    "model_calls": 0
+   },
+   {
+    "kind": "match",
+    "status": 429,
+    "request_id": "5070fc4a",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": false,
+    "c4": true,
+    "c5": false,
+    "model_calls": 0
+   },
+   {
+    "kind": "match",
+    "status": 429,
+    "request_id": "0dcae320",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": false,
+    "c4": true,
+    "c5": false,
+    "model_calls": 0
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "8a155184",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "3990a2d2",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "f7a474f8",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "9119730a",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "f841dc72",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "b20f9eac",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "f7ebbded",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "1e98d7bb",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "08696133",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "a7cb39fa",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "9f74b920",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   }
+  ],
+  "trial_seconds": 20
+ },
+ {
+  "c1": "21/21",
+  "c2": "6/6",
+  "c3": "12/15",
+  "c4": "9/10",
+  "c5": "7/15",
+  "n": [
+   21,
+   6,
+   12,
+   9,
+   7
+  ],
+  "detail": [
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "5acce6e1",
+    "logged_complete": true,
+    "duration_ms": 27277,
+    "c3": true,
+    "c4": false,
+    "c5": true,
+    "model_calls": 3
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "3869b067",
+    "logged_complete": true,
+    "duration_ms": 3085,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "0a5f507e",
+    "logged_complete": true,
+    "duration_ms": 2304,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "ac1e4fda",
+    "logged_complete": true,
+    "duration_ms": 2515,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "19cd650e",
+    "logged_complete": true,
+    "duration_ms": 2160,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "5b07e3e9",
+    "logged_complete": true,
+    "duration_ms": 2352,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "e882c6aa",
+    "logged_complete": true,
+    "duration_ms": 2419,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 429,
+    "request_id": "f5223f17",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": false,
+    "c4": true,
+    "c5": false,
+    "model_calls": 0
+   },
+   {
+    "kind": "match",
+    "status": 429,
+    "request_id": "86725e7a",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": false,
+    "c4": true,
+    "c5": false,
+    "model_calls": 0
+   },
+   {
+    "kind": "match",
+    "status": 429,
+    "request_id": "420da8b8",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": false,
+    "c4": true,
+    "c5": false,
+    "model_calls": 0
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "69e5a01c",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "3ef39205",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "6720b208",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "8403c6b2",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "impossible",
+    "status": 429,
+    "request_id": "521bed56",
+    "logged_complete": true,
+    "duration_ms": 1,
+    "c3": true,
+    "c5": false
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "5f7d1b84",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "21709083",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "5a7323af",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "67faeaa7",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "e75611f5",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "fab84bfe",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   }
+  ],
+  "trial_seconds": 42
+ },
+ {
+  "c1": "21/21",
+  "c2": "6/6",
+  "c3": "15/15",
+  "c4": "8/10",
+  "c5": "15/15",
+  "n": [
+   21,
+   6,
+   15,
+   8,
+   15
+  ],
+  "detail": [
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "80925b15",
+    "logged_complete": true,
+    "duration_ms": 44626,
+    "c3": true,
+    "c4": false,
+    "c5": true,
+    "model_calls": 3
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "8cb54017",
+    "logged_complete": true,
+    "duration_ms": 2946,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "110a3071",
+    "logged_complete": true,
+    "duration_ms": 2433,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "135964aa",
+    "logged_complete": true,
+    "duration_ms": 2786,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "f793f66c",
+    "logged_complete": true,
+    "duration_ms": 2901,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "4136218d",
+    "logged_complete": true,
+    "duration_ms": 2407,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "96d77792",
+    "logged_complete": true,
+    "duration_ms": 2620,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "cf59f207",
+    "logged_complete": true,
+    "duration_ms": 43456,
+    "c3": true,
+    "c4": false,
+    "c5": true,
+    "model_calls": 3
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "823f4369",
+    "logged_complete": true,
+    "duration_ms": 2856,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "match",
+    "status": 200,
+    "request_id": "c453e90b",
+    "logged_complete": true,
+    "duration_ms": 3010,
+    "c3": true,
+    "c4": true,
+    "c5": true,
+    "model_calls": 2
+   },
+   {
+    "kind": "impossible",
+    "status": 200,
+    "request_id": "2d0f3707",
+    "logged_complete": true,
+    "duration_ms": 729,
+    "c3": true,
+    "c5": true
+   },
+   {
+    "kind": "impossible",
+    "status": 200,
+    "request_id": "b128accc",
+    "logged_complete": true,
+    "duration_ms": 675,
+    "c3": true,
+    "c5": true
+   },
+   {
+    "kind": "impossible",
+    "status": 200,
+    "request_id": "d7693c15",
+    "logged_complete": true,
+    "duration_ms": 660,
+    "c3": true,
+    "c5": true
+   },
+   {
+    "kind": "impossible",
+    "status": 200,
+    "request_id": "a9a8130a",
+    "logged_complete": true,
+    "duration_ms": 660,
+    "c3": true,
+    "c5": true
+   },
+   {
+    "kind": "impossible",
+    "status": 200,
+    "request_id": "8bfd67a1",
+    "logged_complete": true,
+    "duration_ms": 707,
+    "c3": true,
+    "c5": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "128eda45",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "d841d578",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "81f33d75",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "f1a12b5e",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "9932b329",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   },
+   {
+    "kind": "malformed",
+    "status": 400,
+    "request_id": "88aef620",
+    "logged_complete": true,
+    "duration_ms": 0,
+    "c2": true
+   }
+  ],
+  "trial_seconds": 114
+ }
+]
